@@ -30,7 +30,7 @@ def search_subnet(file='None', type='None'):
     '''
 
     # 1 - check sys.argv of CLI:
-    if file == 'None' and type == 'None':
+    if file == None and type == None:
         if len(arg) != 3:                                           # check count of sys.argv, can be 3
             print("The number of parameters does not correspond to the required for this function!")
             return
@@ -38,7 +38,7 @@ def search_subnet(file='None', type='None'):
         file_name: str = arg[1]
         type_of_ip: str = arg[2].lower()                            # for register insensitive
 
-    elif file != 'None' and type != 'None':
+    elif file != None and type != None:
         file_name: str = file
         type_of_ip: str = type.lower()
 
