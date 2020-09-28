@@ -1,27 +1,26 @@
-from sys import argv as arg  # for working with args of CLI
+from sys import argv as arg                                     # for working with args of CLI
 import time
 
 
-def search_subnet():
+def search_subnet(file='None', type='None'):
     ''' The function defines the min subnet for received IP-addresses (IPv4 or IPv6).
 
     Tre function is called with two arguments of CLI.
     Arguments of CLI:
     sys.argv[1] is file name with IP-addresses
     sys.argv[2] is type of IP-addresses (IPv4 or IPv6)
+    Only for testing introduced positional arguments with values == 'None'.
     The received data is checked for correctness.
     If the check fails, the function exists and returns the None.
     Else, data processing is performed using auxiliary functions:
     - check_type_of_ip(type_of_ip);
     - taking_kit_of_addresses(file_name);
-    - get_addr_by_octets(arr_with_addr: list, type_of_ip: str);
-    - check_correct_of_addr(addr: list, type_of_ip: str);
-    - search_octet_with_host(addr: list);
-    - search_max_num_in_octets(addr: list, octet_with_host: int);
-    - get_mask(num: int, type_of_ip: str, octet_with_host: int);
-    - get_net_octet(num: list, bit_for_host: int, type_of_ip: str);
-    - get_result(addr: list, net_octet: str, octet_with_host: int, mask: str, type_of_ip: str).
-    The maximum number of bits for hosts from the received set is determined.
+    - get_addr_by_octets(addresses, type_of_ip);
+    - check_correct_of_addr(addresses, type_of_ip);
+    - get_mask(addresses, type_of_ip);
+    - get_net(bit_addr, mask_int, type_of_ip);
+    - get_result(net, mask_int)
+    The maximum number of bits for net from the received set is determined.
     The mask is calculated.
     Tre network  is calculated.
     Result of this function is min subnet for received addresses.
@@ -30,51 +29,51 @@ def search_subnet():
 
     '''
 
-    addresses: list[str] = []  # for IP-addresses from file
-
     # 1 - check sys.argv of CLI:
-    if len(arg) != 3:                                  # check count of sys.argv, can to be 3
-        print("The number of parameters does not correspond to the required for this function!")
-        return
+    if file == 'None' and type == 'None':
+        if len(arg) != 3:                                           # check count of sys.argv, can be 3
+            print("The number of parameters does not correspond to the required for this function!")
+            return
 
-    file_name: str = arg[1]
-    type_of_ip: str = arg[2].lower()                   # for register insensitive
+        file_name: str = arg[1]
+        type_of_ip: str = arg[2].lower()                            # for register insensitive
+
+    elif file != 'None' and type != 'None':
+        file_name: str = file
+        type_of_ip: str = type.lower()
+
+    else:
+        print("The function did not receive parameters!")
+        return
 
     # 2 - checking type of IP-addresses
     if not check_type_of_ip(type_of_ip):
         return
 
     # 3 - reading file and taking a kit of addresses
-    addresses = taking_kit_of_addresses(file_name)
+    addresses: list = taking_kit_of_addresses(file_name)       # for IP-addresses from file
     if not addresses:
         return
 
     # 4 - getting addresses by octets for next step
-    addresses: list[list[str]] = get_addr_by_octets(addresses, type_of_ip)
+    addresses: list = get_addr_by_octets(addresses, type_of_ip)
 
     # 5 - checking correct of addresses from file
     if not check_correct_of_addr(addresses, type_of_ip):
         print('These addresses are incorrect!')
         return
 
-    # 6 - searching an octet/hextet number with different meanings
-    octet_with_host: int = search_octet_with_host(addresses)
-    if not octet_with_host:                              # if all addresses are equal
-        print("All addresses are equal. I can't find the min subnet!")
+    # 6 - getting mask for these addresses
+    mask_int, bit_addr = get_mask(addresses, type_of_ip)
+    if (mask_int == 32 and type_of_ip == 'ipv4') or (mask_int == 128 and type_of_ip == 'ipv6'):
+        print("All addresses are equal. I can't find the min subnet")
         return
 
-    # 7 - search max number in octets/hextets with different meanings
-    max_num_of_host: int = search_max_num_in_octets(addresses, octet_with_host)
+    # 7 - getting net
+    net = get_net(bit_addr[0], mask_int, type_of_ip)
 
-    # 8 - count of bit!=0 for this max number -> mask for these addresses
-    mask, bin_num, bit_for_host = get_mask(max_num_of_host, type_of_ip, octet_with_host)
-    # type mask: str, bin_num: list[str], bit_for_host: int
-
-    # 9 - searching a network part of the addresses
-    net_octet: str = get_net_octet(bin_num, bit_for_host, type_of_ip)
-
-    # 10 - result = address_network + mask
-    return get_result(addresses[0], net_octet, octet_with_host, mask, type_of_ip)    # type: str
+    # 8 - getting result
+    return get_result(net, mask_int)
 
 
 def check_type_of_ip(type_of_ip: str):                         # for step 2 - check type of IP-addresses
@@ -100,30 +99,30 @@ def taking_kit_of_addresses(file_name: str):                   # for step 3
     return arr                                                 # type: list
 
 
-def get_addr_by_octets(arr_with_addr: list, type_of_ip: str):   # for step 4   type of arr_with_addr: list[str]
-    addr_by_octets: list[list[str]] = []
+def get_addr_by_octets(arr_with_addr: list, type_of_ip: str):  # for step 4   type of arr_with_addr: list[str]
+    addr_by_octets: list = []
 
     if type_of_ip == 'ipv4':
         for addr in arr_with_addr:
-            addr_by_octets.append(addr.split('.'))       # [['192', '168', '1', '2' ], ['192', '168', '1', '3' ],...]
+            addr_by_octets.append(addr.split('.'))            # [['192', '168', '1', '2' ],...]
 
-    else:                                                # if type_of_ip == 'ipv6'
+    else:                                                     # if type_of_ip == 'ipv6'
         for addr in arr_with_addr:
-            arr: list[str] = addr.split(':')             # ['ffe0', '', '80', '0', '0', '0']
+            arr: list = addr.split(':')                       # ['ffe0', '', '80', '0', '0', '0']
 
-            count_zero_for_addr: int = 8 - len(arr) + 1  # count zero for '::' or ''
-            zero_arr: list[str] = []
+            count_zero_for_addr: int = 8 - len(arr) + 1       # count zero for '::' or ''
+            zero_arr: list = []
             for i in range(count_zero_for_addr):
-                zero_arr += '0'                          # ['0', '0', '0']
+                zero_arr += '0'                               # ['0', '0', '0']
 
-            for i in range(len(arr)):                    # replacing '' with zero_arr
+            for i in range(len(arr)):                         # replacing '' with zero_arr
                 if arr[i] == '':
                     arr[i:i:1] = zero_arr
                     arr.remove('')
-                    addr_by_octets.append(arr)           # [['ffe0', '0', '0', '0', '1', '0', '0', '0' ], ...]
+                    addr_by_octets.append(arr)                # [['ffe0', '0', '0', '0', '1', '0', '0', '0' ], ...]
                     break
 
-    return addr_by_octets                                # type: list[list[str]]
+    return addr_by_octets                                     # type: list
 
 
 def check_correct_of_addr(addr: list, type_of_ip: str):           # for step 5, type of addr: list[list[str]]
@@ -154,103 +153,112 @@ def check_correct_of_addr(addr: list, type_of_ip: str):           # for step 5, 
     return True
 
 
-def search_octet_with_host(addr: list):     # for step 6, type of addr: list[list[str]]
-    for j in range(len(addr[0])):           # len(addresses[0]) == count of octets/hextets in IP-addresses
-        for i in range(len(addr) - 1):
-            if addr[i][j] != addr[i + 1][j]:
-                return j                    # type: int
+def get_mask(arr_with_addr: list, ip: str):                       # for step 6
+    bin_addr = []
 
-    return None
+    if ip == 'ipv4':                                              # getting address in bin-notation for next step
+        for i in range(len(arr_with_addr)):
+            addr = []
+            for j in range(len(arr_with_addr[i])):
+                buf = str(bin(int(arr_with_addr[i][j])))[2:]      # for delete 'ob'
+                if len(buf) != 8:
+                    before_zero = 8 - len(buf)
+                    for zero in range(before_zero):
+                        buf = '0' + buf                           # filling addresses with '0'
+                addr.append(buf)
+            bin_addr.append(addr)
 
+        count_bit_for_net = 0
+        for j in range(len(bin_addr[0])):                         # counter of identical bits in addresses for mask
+            for k in range(len(bin_addr[0][0])):
+                for i in range(len(bin_addr)-1):
 
-def search_max_num_in_octets(addr: list, octet_with_host: int):  # for step 7, type of addr: list[list[str]]
-    max_num: int = int(addr[0][octet_with_host])
-    for i in range(1, len(addr)):
-        if max_num < int(addr[i][octet_with_host]):
-            max_num = int(addr[i][octet_with_host])
+                    if bin_addr[i][j][k] == bin_addr[i+1][j][k] and i == len(bin_addr)-2:
+                        count_bit_for_net += 1
+                    elif bin_addr[i][j][k] != bin_addr[i+1][j][k]:
 
-    return max_num                                 # type: int
+                        return (count_bit_for_net, bin_addr)       # type:  int, list
 
+    else:                                                          # if type_of_ip == 'ipv6'
+        for i in range(len(arr_with_addr)):
+            addr = []
+            for j in range(len(arr_with_addr[i])):
 
-def get_mask(num: int, type_of_ip: str, octet_with_host: int):   # for step 8
-    bin_num: str = str(bin(num))                  # for search max count bit for host
-    bit_for_host: int = 0                         # it is counter of bit for host
+                if not arr_with_addr[i][j].isdigit():
+                    buf = str(bin(int(arr_with_addr[i][j], 16)))[2:]
 
-    if type_of_ip == 'ipv4':
-        bit_in_addr: int = 32
-        bit_in_section: int = 8
+                else:
+                    buf = str(bin(int(arr_with_addr[i][j])))[2:]
 
-    else:                                         # for 'ipv6'
-        bit_in_addr: int = 128
-        bit_in_section: int = 16
+                if len(buf) != 16:
+                    before_zero = 16 - len(buf)
+                    for zero in range(before_zero):
+                        buf = '0' + buf                             # filling addresses with '0'
 
-    arr_bin_num: list[str] = list(bin_num)
+                addr.append(buf)
+            bin_addr.append(addr)
 
-    for i in range(len(arr_bin_num) - 1, 0, -1):
-        if arr_bin_num[i] == 'b':
-            zero: int = bit_in_section - len(arr_bin_num)
-            zero_line: list[str] = []
+        count_bit_for_net = 0                                       # counter of identical bits in addresses for mask
+        for j in range(len(bin_addr[0])):
+            for k in range(len(bin_addr[0][0])):
+                for i in range(len(bin_addr) - 1):
 
-            for zer in range(zero + 1):           # because we have 'b' -> zero
-                zero_line.append('0')
+                    if bin_addr[i][j][k] == bin_addr[i + 1][j][k] and i == len(bin_addr) - 2:
+                        count_bit_for_net += 1
+                    elif bin_addr[i][j][k] != bin_addr[i + 1][j][k]:
+                        count_bit_for_net -= count_bit_for_net % 4  # because it is 'ipv6'
 
-            arr_bin_num[i:i:1] = zero_line
-            arr_bin_num.remove('b')
-            break
+                        return (count_bit_for_net, bin_addr)        # type:  int, list
 
-        bit_for_host += 1                                  # if bit != 'b'
-
-    bit_for_host += int(((bit_in_addr / bit_in_section) - octet_with_host - 1) * bit_in_section)
-
-    if type_of_ip == 'ipv4':
-        mask: str = '/' + str(bit_in_addr - bit_for_host)  # for 'ipv4' = 32 bits
-
-    else:                                                  # if 'ipv6'
-        bit_for_net = (bit_in_addr-bit_for_host) - (bit_in_addr-bit_for_host) % 4
-        mask: str = '/' + str(bit_for_net)
-        bit_for_host = bit_in_addr - bit_for_net
-
-    return (mask, arr_bin_num, bit_for_host)                # type mask: str, bin_num: list[str], bit_for_host: int
-
-
-def get_net_octet(num: list, bit_for_host: int, type_of_ip: str):  # for step 9, type of num: list[str]
-
-    if type_of_ip == 'ipv4':
-        for i in range(bit_for_host - 1, len(num)):
-            num[i] = '0'
-
-    else:                                          # if 'ipv6'
-        bit_for_host_in_octet: int = 16 - bit_for_host % 16
-        for i in range(bit_for_host_in_octet, len(num)):
-            num[i] = '0'
-
-    return str(int(''.join(num)))                 # type: str
+    return (count_bit_for_net, bin_addr)  # type:  int, list
 
 
-def get_result(addr: list, net_octet: str, octet_with_host: int, mask: str, type_of_ip: str):  # for step 10
-    buf: list[str] = []
-    res: list[str] = []
-    for i in range(octet_with_host):
-        buf.append(addr[i])
-    buf.append(net_octet)
+def get_net(bin_addr: list, count_net: int, ip: str):  # for step 7
+    count = 0
+    addr_net = []
 
-    if type_of_ip == 'ipv4':
-        res = '.'.join(buf)
-        res += mask
+    for i in range(len(bin_addr)):
+        bin_addr[i] = list(bin_addr[i])
 
-    else:                    # if 'ipv6'
-        flag: bool = False
-        for i in range(len(buf)):
-            if buf[i] == '0' and flag == False:
-                res.append('::')
+        for j in range(len(bin_addr[i])):
+                count += 1
+                if count_net < count:                 # this count the address is filled with '0' for get net
+                    bin_addr[i][j] = '0'
+        addr_net.append(''.join(bin_addr[i]))
+
+    if ip == 'ipv4':
+        for i in range(len(addr_net)):
+            addr_net[i] = str(int(addr_net[i], 2))
+
+        return '.'.join(addr_net)                     # type: str
+
+    else:                                             # if type_of_ip == 'ipv6'
+        net: str = ''
+        flag = False                                  # use this flag only one time for take '::'
+
+        for i in range(len(addr_net)):                # collecting address for 'ipv6'-type
+            hex_num = hex(int(addr_net[i], 2))[2::]
+
+            if hex_num.isdigit():
+                hex_num = str(int(hex_num, 16))       # because we have number in hex-notation, for get int in result
+
+            if hex_num != '0' and i == 0:                                 # for the first number
+                net += hex_num
+            elif hex_num != '0' and i != 0 and net[len(net)-1] != ':':    # count of hextets != 0 > 1
+                net += (':' + hex_num)
+            elif hex_num != '0' and i != 0 and net[len(net)-1] == ':':    # for exclude 'ffeo::' + ':7' -> 'ffeo:::7'
+                net += hex_num
+            elif hex_num == '0' and flag == False:                        # if we meet '0' at the first time
+                net += '::'
                 flag = True
-            elif buf[i] != '0':
-                res.append(buf[i])
+            elif hex_num == '0' and (net[len(net)-1] != ':'):             # if we already have '::'
+                net += (':' + hex_num)
 
-        res = ''.join(res)
-        res += mask
+        return net                                                       # type: str
 
-    return res               # type: str
+
+def get_result(net: str, count_net: int):          # for step 8
+    return net + '/' + str(count_net)              # format of subnet, return type: str
 
 
 if __name__ == '__main__':
