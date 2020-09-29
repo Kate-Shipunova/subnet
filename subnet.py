@@ -9,7 +9,7 @@ def search_subnet(file=None, type=None):
     Arguments of CLI:
     sys.argv[1] is file name with IP-addresses
     sys.argv[2] is type of IP-addresses (IPv4 or IPv6)
-    Only for testing introduced positional arguments with values == 'None'.
+    Only for testing introduced positional arguments with values == None.
     The received data is checked for correctness.
     If the check fails, the function exists and returns the None.
     Else, data processing is performed using auxiliary functions:
