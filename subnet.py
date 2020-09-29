@@ -2,7 +2,7 @@ from sys import argv as arg                                     # for working wi
 import time
 
 
-def search_subnet(file='None', type='None'):
+def search_subnet(file=None, type=None):
     ''' The function defines the min subnet for received IP-addresses (IPv4 or IPv6).
 
     Tre function is called with two arguments of CLI.
